@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, CheckCircle, Rocket, BarChart3, Zap, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -16,9 +19,9 @@ const Index = () => {
           </div>
           <nav className="hidden md:flex items-center gap-6">
             <a href="#recursos" className="text-muted-foreground hover:text-foreground transition-smooth">Recursos</a>
-            <a href="#precos" className="text-muted-foreground hover:text-foreground transition-smooth">Preços</a>
-            <Button variant="ghost">Login</Button>
-            <Button variant="default">Teste grátis</Button>
+            <Button variant="ghost" onClick={() => navigate('/pricing')}>Preços</Button>
+            <Button variant="ghost" onClick={() => navigate('/auth')}>Login</Button>
+            <Button variant="default" onClick={() => navigate('/auth')}>Teste grátis</Button>
           </nav>
         </div>
       </header>
@@ -34,11 +37,20 @@ const Index = () => {
             Transforme novos usuários em clientes satisfeitos.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Button size="lg" className="text-lg px-8 py-6 gradient-primary hover:shadow-elegant transition-all">
+            <Button 
+              size="lg" 
+              className="text-lg px-8 py-6 gradient-primary hover:shadow-elegant transition-all"
+              onClick={() => navigate('/auth')}
+            >
               Teste grátis por 14 dias
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
-            <Button variant="outline" size="lg" className="text-lg px-8 py-6">
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="text-lg px-8 py-6"
+              onClick={() => navigate('/auth')}
+            >
               Ver demonstração
             </Button>
           </div>
@@ -172,7 +184,12 @@ const Index = () => {
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
             Junte-se a centenas de empresas que já transformaram a experiência dos seus clientes
           </p>
-          <Button size="lg" variant="secondary" className="text-lg px-8 py-6 shadow-elegant">
+          <Button 
+            size="lg" 
+            variant="secondary" 
+            className="text-lg px-8 py-6 shadow-elegant"
+            onClick={() => navigate('/auth')}
+          >
             Começar teste grátis
             <ArrowRight className="ml-2 w-5 h-5" />
           </Button>
@@ -189,9 +206,9 @@ const Index = () => {
             <span className="text-xl font-bold">Onboardly</span>
           </div>
           <div className="flex flex-wrap justify-center gap-6 mb-6 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-foreground transition-smooth">Blog</a>
-            <a href="#" className="hover:text-foreground transition-smooth">Suporte</a>
-            <a href="#" className="hover:text-foreground transition-smooth">Login</a>
+            <button onClick={() => navigate('/blog')} className="hover:text-foreground transition-smooth">Blog</button>
+            <button onClick={() => navigate('/support')} className="hover:text-foreground transition-smooth">Suporte</button>
+            <button onClick={() => navigate('/auth')} className="hover:text-foreground transition-smooth">Login</button>
             <a href="#" className="hover:text-foreground transition-smooth">Política de Privacidade</a>
             <a href="#" className="hover:text-foreground transition-smooth">Termos de Uso</a>
           </div>
