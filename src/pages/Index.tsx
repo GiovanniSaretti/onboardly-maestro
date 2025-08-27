@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, CheckCircle, Rocket, BarChart3, Zap, Users } from "lucide-react";
+import { ArrowRight, CheckCircle, Rocket, BarChart3, Zap, Users, Play } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import dashboardExample from "@/assets/dashboard-example.jpg";
+import flowCreatorExample from "@/assets/flow-creator-example.jpg";
+import templatesExample from "@/assets/templates-example.jpg";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -171,6 +174,96 @@ const Index = () => {
                 </CardDescription>
               </CardContent>
             </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Platform Demo Section */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-4">Veja a plataforma em ação</h2>
+            <p className="text-xl text-muted-foreground">Interface intuitiva e poderosa para criar automações incríveis</p>
+          </div>
+          
+          <div className="grid lg:grid-cols-3 gap-8">
+            <Card className="shadow-card hover:shadow-elegant transition-all overflow-hidden">
+              <div className="aspect-video relative overflow-hidden">
+                <img 
+                  src={dashboardExample} 
+                  alt="Dashboard com métricas de onboarding" 
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                  <Play className="w-12 h-12 text-white" />
+                </div>
+              </div>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-success" />
+                  Dashboard Analytics
+                </CardTitle>
+                <CardDescription>
+                  Acompanhe métricas em tempo real: taxa de conclusão, engajamento e muito mais
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="shadow-card hover:shadow-elegant transition-all overflow-hidden">
+              <div className="aspect-video relative overflow-hidden">
+                <img 
+                  src={flowCreatorExample} 
+                  alt="Editor de fluxo visual" 
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                  <Play className="w-12 h-12 text-white" />
+                </div>
+              </div>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-primary" />
+                  Flow Creator
+                </CardTitle>
+                <CardDescription>
+                  Editor visual drag & drop para criar fluxos de onboarding personalizados
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="shadow-card hover:shadow-elegant transition-all overflow-hidden">
+              <div className="aspect-video relative overflow-hidden">
+                <img 
+                  src={templatesExample} 
+                  alt="Galeria de templates" 
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                  <Play className="w-12 h-12 text-white" />
+                </div>
+              </div>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary" />
+                  Templates Prontos
+                </CardTitle>
+                <CardDescription>
+                  Biblioteca com dezenas de templates para diferentes setores e casos de uso
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+
+          <div className="text-center mt-12">
+            <Button 
+              size="lg" 
+              variant="default"
+              className="text-lg px-8 py-6"
+              onClick={() => navigate('/auth')}
+            >
+              Experimentar agora
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </Button>
           </div>
         </div>
       </section>
