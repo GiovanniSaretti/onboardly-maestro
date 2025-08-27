@@ -100,7 +100,7 @@ const Dashboard = () => {
             <span className="text-sm text-muted-foreground hidden md:block">
               Olá, {user?.user_metadata?.name || user?.email}
             </span>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/settings')}>
               <Settings className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon" onClick={handleSignOut}>
@@ -198,10 +198,10 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <Button className="w-full gradient-primary">
+                <Button className="w-full gradient-primary" onClick={() => navigate('/flow-creator')}>
                   Começar do Zero
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" onClick={() => navigate('/templates')}>
                   Usar Template
                 </Button>
               </div>
@@ -220,10 +220,10 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" onClick={() => navigate('/analytics')}>
                   Ver Relatórios
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" onClick={() => navigate('/analytics')}>
                   Exportar Dados
                 </Button>
               </div>

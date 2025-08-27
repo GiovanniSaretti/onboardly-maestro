@@ -10,6 +10,10 @@ import Dashboard from "./pages/Dashboard";
 import Pricing from "./pages/Pricing";
 import Blog from "./pages/Blog";
 import Support from "./pages/Support";
+import FlowCreator from "./pages/FlowCreator";
+import Templates from "./pages/Templates";
+import Analytics from "./pages/Analytics";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +30,10 @@ const App = () => (
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/flow-creator" element={<FlowCreator />} />
+          <Route path="/templates" element={<Templates />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
