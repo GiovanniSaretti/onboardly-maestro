@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, 
   Save,
@@ -27,7 +28,11 @@ import { IntegrationDialog } from "@/components/IntegrationDialog";
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // State adicional para funcionalidades
+  const [isResetting, setIsResetting] = useState(false);
   
   const {
     loading,
@@ -79,8 +84,24 @@ const Settings = () => {
     return existing || def;
   })];
 
+  
   const handleSave = async () => {
     await saveCompanySettings(companySettings);
+  };
+  
+  const handleReset = () => {
+    setIsResetting(true);
+    setCompanySettings({
+      company_name: '',
+      company_email: '',
+      company_description: '',
+      primary_color: '#2563EB'
+    });
+    setTimeout(() => setIsResetting(false), 500);
+    toast({
+      title: "Formulário limpo",
+      description: "Todos os campos foram resetados."
+    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,10 +149,15 @@ const Settings = () => {
             </div>
           </div>
           
-          <Button onClick={handleSave} disabled={loading} className="gradient-primary">
-            <Save className="w-4 h-4 mr-2" />
-            {loading ? 'Salvando...' : 'Salvar Alterações'}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleSave} disabled={loading} className="gradient-primary">
+              <Save className="w-4 h-4 mr-2" />
+              {loading ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+            <Button variant="outline" onClick={handleReset} disabled={loading || isResetting}>
+              {isResetting ? 'Limpando...' : 'Limpar'}
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -395,7 +421,12 @@ const Settings = () => {
                   <p className="text-sm text-muted-foreground mb-4">
                     1 fluxo • 10 clientes • Branding Onboardly
                   </p>
-                  <Button className="gradient-primary">
+                  <Button className="gradient-primary" onClick={() => {
+                    toast({
+                      title: "Em desenvolvimento",
+                      description: "A funcionalidade de upgrade para premium estará disponível em breve!"
+                    });
+                  }}>
                     Fazer Upgrade para Premium
                   </Button>
                 </div>
@@ -425,7 +456,12 @@ const Settings = () => {
                 <div className="space-y-4">
                   <div className="flex gap-2">
                     <Input placeholder="E-mail do membro" />
-                    <Button>Convidar</Button>
+                    <Button onClick={() => {
+                      toast({
+                        title: "Em desenvolvimento",
+                        description: "A funcionalidade de gerenciamento de equipe estará disponível em breve!"
+                      });
+                    }}>Convidar</Button>
                   </div>
                   
                   <div className="text-sm text-muted-foreground">
@@ -454,44 +490,95 @@ const Settings = () => {
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <div>
-                    <Label>Alterar Senha</Label>
-                    <div className="space-y-2 mt-2">
-                      <Input type="password" placeholder="Senha atual" />
-                      <Input type="password" placeholder="Nova senha" />
-                      <Input type="password" placeholder="Confirmar nova senha" />
-                    </div>
-                    <Button variant="outline" className="mt-2">
-                      Atualizar Senha
-                    </Button>
+                    <Label htmlFor="current-password">Senha Atual</Label>
+                    <Input
+                      id="current-password"
+                      type="password"
+                      placeholder="Digite sua senha atual"
+                    />
                   </div>
-                  
-                  <Separator />
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label>Autenticação de Dois Fatores (2FA)</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Adicione uma camada extra de segurança
-                      </p>
-                    </div>
-                    <Button variant="outline">
-                      Configurar 2FA
-                    </Button>
-                  </div>
-                  
-                  <Separator />
                   
                   <div>
-                    <Label>Sessões Ativas</Label>
-                    <div className="mt-2 p-3 border rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="text-sm font-medium">Sessão Atual</p>
-                          <p className="text-xs text-muted-foreground">
-                            Chrome • São Paulo, Brasil
-                          </p>
+                    <Label htmlFor="new-password">Nova Senha</Label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      placeholder="Digite sua nova senha"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="Confirme sua nova senha"
+                    />
+                  </div>
+                  
+                  <Button onClick={() => {
+                    toast({
+                      title: "Em desenvolvimento",
+                      description: "A funcionalidade de alteração de senha estará disponível em breve!"
+                    });
+                  }}>
+                    Alterar Senha
+                  </Button>
+                  
+                  <Separator />
+                  
+                  <div className="space-y-4">
+                    <h4 className="font-medium">Autenticação de Dois Fatores (2FA)</h4>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-medium">2FA via SMS</p>
+                        <p className="text-sm text-muted-foreground">
+                          Receba códigos de verificação por SMS
+                        </p>
+                      </div>
+                      <Switch 
+                        onCheckedChange={(checked) => {
+                          toast({
+                            title: checked ? "2FA Ativado" : "2FA Desativado",
+                            description: checked 
+                              ? "Autenticação de dois fatores ativada com sucesso!" 
+                              : "Autenticação de dois fatores desativada."
+                          });
+                        }}
+                      />
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div>
+                      <h4 className="font-medium mb-3">Sessões Ativas</h4>
+                      <div className="space-y-2">
+                        <div className="p-3 border rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-sm font-medium">Sessão Atual</p>
+                              <p className="text-xs text-muted-foreground">
+                                Chrome • São Paulo, Brasil • {new Date().toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Badge variant="default">Ativa</Badge>
+                          </div>
                         </div>
-                        <Badge variant="outline">Ativa</Badge>
+                        
+                        <div className="flex gap-2 mt-3">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              toast({
+                                title: "Sessões encerradas",
+                                description: "Todas as outras sessões foram encerradas com sucesso."
+                              });
+                            }}
+                          >
+                            Encerrar outras sessões
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>

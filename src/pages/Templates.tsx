@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, 
   Search, 
@@ -19,6 +22,12 @@ import {
 
 const Templates = () => {
   const navigate = useNavigate();
+  
+  // State para funcionalidades
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [previewTemplate, setPreviewTemplate] = useState<any>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const categories = [
     { id: 'all', name: 'Todos', icon: Zap },
@@ -98,8 +107,30 @@ const Templates = () => {
     }
   ];
 
+  const { toast } = useToast();
+  
+  // State adicional para funcionalidades
+  const [isResetting, setIsResetting] = useState(false);
+  
+  // Filtrar templates baseado na busca e categoria
+  const filteredTemplates = templates.filter(template => {
+    const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         template.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
   const useTemplate = (templateId: number) => {
+    toast({
+      title: "Template aplicado!",
+      description: "Redirecionando para o criador de fluxos..."
+    });
     navigate(`/flow-creator?template=true&id=${templateId}`);
+  };
+
+  const previewTemplateHandler = (template: any) => {
+    setPreviewTemplate(template);
+    setPreviewOpen(true);
   };
 
   return (
@@ -130,6 +161,8 @@ const Templates = () => {
               <Input
                 placeholder="Buscar templates..."
                 className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
@@ -140,9 +173,10 @@ const Templates = () => {
               return (
                 <Button
                   key={category.id}
-                  variant="outline"
+                  variant={selectedCategory === category.id ? "default" : "outline"}
                   size="sm"
                   className="flex items-center gap-2"
+                  onClick={() => setSelectedCategory(category.id)}
                 >
                   <Icon className="w-4 h-4" />
                   {category.name}
@@ -154,7 +188,8 @@ const Templates = () => {
 
         {/* Grid de Templates */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {templates.map((template) => (
+          {filteredTemplates.length > 0 ? (
+            filteredTemplates.map((template) => (
             <Card key={template.id} className="shadow-card hover:shadow-elegant transition-all">
               <CardHeader>
                 <div className="flex justify-between items-start mb-2">
@@ -192,6 +227,7 @@ const Templates = () => {
                       variant="outline" 
                       size="sm"
                       className="flex-1"
+                      onClick={() => previewTemplateHandler(template)}
                     >
                       <Eye className="w-4 h-4 mr-2" />
                       Preview
@@ -207,7 +243,15 @@ const Templates = () => {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <p className="text-muted-foreground mb-4">Nenhum template encontrado</p>
+              <p className="text-sm text-muted-foreground">
+                Tente ajustar os filtros ou termo de busca
+              </p>
+            </div>
+          )}
         </div>
 
         {/* CTA para Criadores */}
@@ -224,6 +268,87 @@ const Templates = () => {
             </Button>
           </CardContent>
         </Card>
+        
+        {/* Dialog de Preview */}
+        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Preview: {previewTemplate?.name}</DialogTitle>
+            </DialogHeader>
+            
+            {previewTemplate && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Badge variant={previewTemplate.price === 'Gratuito' ? 'default' : 'secondary'}>
+                      {previewTemplate.price}
+                    </Badge>
+                    <Badge variant="outline">
+                      {previewTemplate.steps} etapas
+                    </Badge>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      {previewTemplate.rating}
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold mb-2">Descrição</h3>
+                  <p className="text-muted-foreground">{previewTemplate.description}</p>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold mb-2">Estrutura do Fluxo</h3>
+                  <div className="space-y-2">
+                    {Array.from({ length: previewTemplate.steps }, (_, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
+                        <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                          {i + 1}
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {i === 0 ? 'Boas-vindas e Apresentação' :
+                             i === 1 ? 'Coleta de Informações Básicas' :
+                             i === 2 ? 'Configuração Inicial' :
+                             i === previewTemplate.steps - 1 ? 'Finalização e Próximos Passos' :
+                             `Etapa ${i + 1}`}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {i === 0 ? 'Apresentação da empresa e processo' :
+                             i === 1 ? 'Coleta de dados pessoais e preferências' :
+                             i === 2 ? 'Configurações e personalizações' :
+                             i === previewTemplate.steps - 1 ? 'Resumo e orientações finais' :
+                             'Etapa personalizada do fluxo'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="flex gap-2 pt-4 border-t">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setPreviewOpen(false)}
+                    className="flex-1"
+                  >
+                    Fechar Preview
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setPreviewOpen(false);
+                      useTemplate(previewTemplate.id);
+                    }}
+                    className="flex-1 gradient-primary"
+                  >
+                    Usar Este Template
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
