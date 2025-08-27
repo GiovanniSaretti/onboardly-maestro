@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { Rocket, Mail, Lock, User } from "lucide-react";
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(window.location.pathname === '/login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');

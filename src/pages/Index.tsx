@@ -23,8 +23,8 @@ const Index = () => {
           <nav className="hidden md:flex items-center gap-6">
             <a href="#recursos" className="text-muted-foreground hover:text-foreground transition-smooth">Recursos</a>
             <Button variant="ghost" onClick={() => navigate('/pricing')}>Preços</Button>
-            <Button variant="ghost" onClick={() => navigate('/auth')}>Login</Button>
-            <Button variant="default" onClick={() => navigate('/auth')}>Teste grátis</Button>
+            <Button variant="ghost" onClick={() => navigate("/login")}>Login</Button>
+            <Button variant="default" onClick={() => navigate("/auth")}>Teste grátis</Button>
           </nav>
         </div>
       </header>
@@ -44,8 +44,6 @@ const Index = () => {
               size="lg" 
               className="text-lg px-8 py-6 gradient-primary hover:shadow-elegant transition-all"
               onClick={() => navigate('/auth')}
-            >
-              Teste grátis por 14 dias
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
             <Button 
@@ -258,8 +256,6 @@ const Index = () => {
               variant="default"
               className="text-lg px-8 py-6"
               onClick={() => navigate('/auth')}
-            >
-              Experimentar agora
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
           </div>
@@ -280,8 +276,6 @@ const Index = () => {
             variant="secondary" 
             className="text-lg px-8 py-6 shadow-elegant"
             onClick={() => navigate('/auth')}
-          >
-            Começar teste grátis
             <ArrowRight className="ml-2 w-5 h-5" />
           </Button>
         </div>
