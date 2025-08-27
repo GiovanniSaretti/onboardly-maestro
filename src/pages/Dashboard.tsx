@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -14,13 +14,19 @@ import {
   TrendingUp,
   LogOut,
   Settings,
-  Zap
+  Zap,
+  Edit,
+  Trash2,
+  Play
 } from "lucide-react";
+import { onboardingApi, type Onboarding } from '@/lib/api/onboardings';
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [onboardings, setOnboardings] = useState<Onboarding[]>([]);
+  const [loadingOnboardings, setLoadingOnboardings] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -34,6 +40,8 @@ const Dashboard = () => {
         
         if (!session) {
           navigate('/auth');
+        } else {
+          loadOnboardings();
         }
       }
     );
@@ -46,26 +54,66 @@ const Dashboard = () => {
       
       if (!session) {
         navigate('/auth');
+      } else {
+        loadOnboardings();
       }
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  const loadOnboardings = async () => {
+    setLoadingOnboardings(true);
+    try {
+      const data = await onboardingApi.getAll();
+      setOnboardings(data);
+    } catch (error) {
+      console.error('Error loading onboardings:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os fluxos",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingOnboardings(false);
+    }
+  };
+
+  const handleDeleteOnboarding = async (id: string, name: string) => {
+    if (!confirm(`Tem certeza que deseja excluir o fluxo "${name}"?`)) {
+      return;
+    }
+
+    try {
+      await onboardingApi.delete(id);
+      setOnboardings(onboardings.filter(o => o.id !== id));
+      toast({
+        title: "Fluxo excluído",
+        description: `O fluxo "${name}" foi excluído com sucesso.`,
+      });
+    } catch (error) {
+      console.error('Error deleting onboarding:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o fluxo",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
+      await supabase.auth.signOut();
       toast({
         title: "Logout realizado",
         description: "Você foi desconectado com sucesso.",
       });
-      navigate('/');
-    } catch (error: any) {
+      navigate('/auth');
+    } catch (error) {
+      console.error('Error signing out:', error);
       toast({
         title: "Erro",
-        description: error.message || "Erro ao fazer logout.",
+        description: "Erro ao fazer logout",
         variant: "destructive",
       });
     }
@@ -75,31 +123,35 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 gradient-hero rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <Rocket className="w-8 h-8 text-white" />
-          </div>
-          <p className="text-muted-foreground">Carregando...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Carregando...</p>
         </div>
       </div>
     );
   }
 
+  if (!session || !user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 gradient-hero rounded-lg flex items-center justify-center">
+          <div className="flex items-center gap-4">
+            <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center">
               <Rocket className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-foreground">Onboardly</span>
+            <div>
+              <h1 className="text-xl font-bold">Onboardly</h1>
+              <p className="text-sm text-muted-foreground">
+                Bem-vindo, {user.email}
+              </p>
+            </div>
           </div>
           
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground hidden md:block">
-              Olá, {user?.user_metadata?.name || user?.email}
-            </span>
+          <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => navigate('/settings')}>
               <Settings className="w-4 h-4" />
             </Button>
@@ -111,171 +163,212 @@ const Dashboard = () => {
       </header>
 
       <div className="container mx-auto px-4 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            Bem-vindo ao seu Dashboard!
-          </h1>
-          <p className="text-muted-foreground">
-            Gerencie seus fluxos de onboarding e acompanhe o progresso dos seus clientes.
-          </p>
-        </div>
-
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="shadow-card hover:shadow-elegant transition-all">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Taxa de Conclusão
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-success" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-success">85%</div>
-              <p className="text-xs text-muted-foreground">
-                +12% desde o mês passado
-              </p>
+        {/* Stats Cards */}
+        <div className="grid md:grid-cols-4 gap-6 mb-8">
+          <Card className="shadow-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Fluxos Ativos</p>
+                  <p className="text-2xl font-bold">{onboardings.length}</p>
+                </div>
+                <Zap className="w-8 h-8 text-primary" />
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-card hover:shadow-elegant transition-all">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Clientes Ativos
-              </CardTitle>
-              <Users className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">24</div>
-              <p className="text-xs text-muted-foreground">
-                +3 novos esta semana
-              </p>
+          <Card className="shadow-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Clientes Ativos</p>
+                  <p className="text-2xl font-bold">0</p>
+                </div>
+                <Users className="w-8 h-8 text-blue-500" />
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-card hover:shadow-elegant transition-all">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Fluxos Criados
-              </CardTitle>
-              <Zap className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">3</div>
-              <p className="text-xs text-muted-foreground">
-                2 ativos, 1 rascunho
-              </p>
+          <Card className="shadow-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Taxa de Conclusão</p>
+                  <p className="text-2xl font-bold">0%</p>
+                </div>
+                <CheckCircle className="w-8 h-8 text-green-500" />
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-card hover:shadow-elegant transition-all">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Engajamento
-              </CardTitle>
-              <BarChart3 className="h-4 w-4 text-success" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">92%</div>
-              <p className="text-xs text-muted-foreground">
-                Taxa de abertura de e-mails
-              </p>
+          <Card className="shadow-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Crescimento</p>
+                  <p className="text-2xl font-bold">+0%</p>
+                </div>
+                <TrendingUp className="w-8 h-8 text-orange-500" />
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Actions */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <Card className="shadow-card hover:shadow-elegant transition-all">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Criar Novo Fluxo
-              </CardTitle>
-              <CardDescription>
-                Configure um novo fluxo de onboarding para seus clientes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <Button className="w-full gradient-primary" onClick={() => navigate('/flow-creator')}>
-                  Começar do Zero
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Fluxos de Onboarding */}
+          <div className="lg:col-span-2">
+            <Card className="shadow-card">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Seus Fluxos de Onboarding</CardTitle>
+                    <CardDescription>
+                      Gerencie e monitore seus fluxos de automação
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => navigate('/flow-creator')} className="gradient-primary">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Novo Fluxo
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingOnboardings ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Carregando fluxos...</p>
+                  </div>
+                ) : onboardings.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Zap className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <h3 className="text-lg font-medium mb-2">Nenhum fluxo criado ainda</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Crie seu primeiro fluxo de onboarding para começar a automatizar o processo de boas-vindas dos seus clientes.
+                    </p>
+                    <Button onClick={() => navigate('/flow-creator')} className="gradient-primary">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Criar Primeiro Fluxo
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {onboardings.map((onboarding) => (
+                      <Card key={onboarding.id} className="shadow-sm">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 gradient-primary rounded-lg flex items-center justify-center">
+                                <Zap className="w-5 h-5 text-white" />
+                              </div>
+                              <div>
+                                <h4 className="font-medium">{onboarding.name}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  Criado em {new Date(onboarding.created_at).toLocaleDateString('pt-BR')}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate(`/analytics?flow=${onboarding.id}`)}
+                              >
+                                <BarChart3 className="w-4 h-4 mr-2" />
+                                Relatórios
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate(`/flow-creator/${onboarding.id}`)}
+                              >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Editar
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteOnboarding(onboarding.id, onboarding.name)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Ações Rápidas */}
+          <div className="lg:col-span-1">
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle>Ações Rápidas</CardTitle>
+                <CardDescription>
+                  Acesse rapidamente as principais funcionalidades
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/flow-creator')}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Criar Novo Fluxo
                 </Button>
-                <Button variant="outline" className="w-full" onClick={() => navigate('/templates')}>
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/templates')}
+                >
+                  <Rocket className="w-4 h-4 mr-2" />
                   Usar Template
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-card hover:shadow-elegant transition-all">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
-                Análise Rápida
-              </CardTitle>
-              <CardDescription>
-                Veja o desempenho dos seus fluxos em tempo real
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <Button variant="outline" className="w-full" onClick={() => navigate('/analytics')}>
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/analytics')}
+                >
+                  <BarChart3 className="w-4 h-4 mr-2" />
                   Ver Relatórios
                 </Button>
-                <Button variant="outline" className="w-full" onClick={() => navigate('/analytics')}>
-                  Exportar Dados
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/settings')}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Configurações
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {/* Dicas */}
+            <Card className="shadow-card mt-6">
+              <CardHeader>
+                <CardTitle className="text-base">💡 Dica</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Comece criando um fluxo simples com 2-3 etapas. Você pode sempre adicionar mais complexidade depois!
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-
-        {/* Recent Activity */}
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle>Atividade Recente</CardTitle>
-            <CardDescription>
-              Últimas ações dos seus clientes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-success/10 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-4 h-4 text-success" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Cliente João Silva concluiu o fluxo "Boas-vindas SaaS"</p>
-                  <p className="text-xs text-muted-foreground">Há 2 horas</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Users className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">3 novos clientes iniciaram o onboarding</p>
-                  <p className="text-xs text-muted-foreground">Há 4 horas</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Fluxo "Onboarding Agência" foi ativado</p>
-                  <p className="text-xs text-muted-foreground">Ontem</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
 };
 
 export default Dashboard;
+

@@ -1,58 +1,154 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
   ArrowLeft, 
   Save, 
   Send, 
   Clock, 
-  FileText,
-  Calendar,
-  Zap,
+  MessageSquare,
   Plus,
-  Trash2
+  Zap
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { StepItem, StepData } from '@/components/StepItem';
+import { StepEditor } from '@/components/StepEditor';
+import { onboardingApi } from '@/lib/api/onboardings';
 
 const FlowCreator = () => {
-  const [searchParams] = useSearchParams();
-  const isTemplate = searchParams.get('template') === 'true';
+  const { id } = useParams();
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const [onboarding, setOnboarding] = useState<any>(null);
   const [flowName, setFlowName] = useState('');
   const [flowDescription, setFlowDescription] = useState('');
-  const [steps, setSteps] = useState([
-    { id: 1, type: 'email', title: 'E-mail de Boas-vindas', delay: 0 }
-  ]);
+  const [steps, setSteps] = useState<StepData[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingStep, setEditingStep] = useState<StepData | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Load existing onboarding if editing
+  useEffect(() => {
+    if (id) {
+      loadOnboarding();
+    }
+  }, [id]);
+
+  const loadOnboarding = async () => {
+    if (!id) return;
+    
+    setLoading(true);
+    try {
+      const data = await onboardingApi.getById(id);
+      if (data) {
+        setOnboarding(data);
+        setFlowName(data.name);
+        setSteps(data.steps.map((step: any) => ({
+          id: step.id,
+          type: step.type,
+          content: step.content,
+          order: step.order
+        })));
+      }
+    } catch (error) {
+      console.error('Error loading onboarding:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar o fluxo",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const stepTypes = [
-    { id: 'email', name: 'Enviar E-mail', icon: Send, color: 'text-primary' },
-    { id: 'delay', name: 'Adicionar Atraso', icon: Clock, color: 'text-warning' },
-    { id: 'pdf', name: 'Enviar PDF', icon: FileText, color: 'text-success' },
-    { id: 'meeting', name: 'Agendar Reunião', icon: Calendar, color: 'text-purple-500' }
+    { id: 'EMAIL', name: 'Enviar E-mail', icon: Send, color: 'text-blue-500' },
+    { id: 'DELAY', name: 'Adicionar Atraso', icon: Clock, color: 'text-orange-500' },
+    { id: 'WHATSAPP_MSG', name: 'Mensagem WhatsApp', icon: MessageSquare, color: 'text-green-500' }
   ];
 
-  const addStep = (type: string) => {
-    const newStep = {
-      id: Date.now(),
+  const generateStepId = () => `step_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  const addStep = (type: 'EMAIL' | 'DELAY' | 'WHATSAPP_MSG') => {
+    const newStep: StepData = {
+      id: generateStepId(),
       type,
-      title: `Nova etapa - ${stepTypes.find(t => t.id === type)?.name}`,
-      delay: 0
+      content: getDefaultContent(type),
+      order: steps.length
     };
     setSteps([...steps, newStep]);
   };
 
-  const removeStep = (id: number) => {
-    setSteps(steps.filter(step => step.id !== id));
+  const getDefaultContent = (type: string) => {
+    switch (type) {
+      case 'EMAIL':
+        return { subject: '', body: '' };
+      case 'DELAY':
+        return { delayInDays: 1 };
+      case 'WHATSAPP_MSG':
+        return { message: '' };
+      default:
+        return {};
+    }
   };
 
-  const handleSave = () => {
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    
+    if (active.id !== over.id) {
+      setSteps((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const handleEditStep = (step: StepData) => {
+    setEditingStep(step);
+    setIsEditorOpen(true);
+  };
+
+  const handleSaveStep = (updatedStep: StepData) => {
+    setSteps(steps.map(step => 
+      step.id === updatedStep.id ? updatedStep : step
+    ));
+  };
+
+  const handleDeleteStep = (stepId: string) => {
+    setSteps(steps.filter(step => step.id !== stepId));
+  };
+
+  const handleSave = async () => {
     if (!flowName.trim()) {
       toast({
         title: "Erro",
@@ -62,13 +158,56 @@ const FlowCreator = () => {
       return;
     }
 
-    toast({
-      title: "Fluxo salvo!",
-      description: `O fluxo "${flowName}" foi salvo com sucesso.`,
-    });
-    
-    setTimeout(() => navigate('/dashboard'), 1000);
+    setSaving(true);
+    try {
+      let onboardingId = id;
+
+      // Create new onboarding if not editing existing one
+      if (!onboardingId) {
+        const newOnboarding = await onboardingApi.create(flowName);
+        onboardingId = newOnboarding.id;
+      } else {
+        // Update existing onboarding name
+        await onboardingApi.update(onboardingId, { name: flowName });
+      }
+
+      // Save steps
+      const stepsToSave = steps.map((step, index) => ({
+        type: step.type,
+        content: step.content,
+        order: index
+      }));
+
+      await onboardingApi.saveSteps(onboardingId, stepsToSave);
+
+      toast({
+        title: "Fluxo salvo!",
+        description: `O fluxo "${flowName}" foi salvo com sucesso.`,
+      });
+      
+      setTimeout(() => navigate('/dashboard'), 1000);
+    } catch (error) {
+      console.error('Error saving onboarding:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar o fluxo",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Carregando fluxo...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -81,17 +220,17 @@ const FlowCreator = () => {
             </Button>
             <div>
               <h1 className="text-xl font-bold">
-                {isTemplate ? 'Usar Template' : 'Criar Novo Fluxo'}
+                {id ? 'Editar Fluxo' : 'Criar Novo Fluxo'}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {isTemplate ? 'Personalize um template pronto' : 'Configure seu fluxo de onboarding'}
+                Configure seu fluxo de onboarding
               </p>
             </div>
           </div>
           
-          <Button onClick={handleSave} className="gradient-primary">
+          <Button onClick={handleSave} disabled={saving} className="gradient-primary">
             <Save className="w-4 h-4 mr-2" />
-            Salvar Fluxo
+            {saving ? 'Salvando...' : 'Salvar Fluxo'}
           </Button>
         </div>
       </header>
@@ -132,7 +271,7 @@ const FlowCreator = () => {
 
                 <div>
                   <Label>Adicionar Etapa</Label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
+                  <div className="space-y-2 mt-2">
                     {stepTypes.map((type) => {
                       const Icon = type.icon;
                       return (
@@ -140,11 +279,12 @@ const FlowCreator = () => {
                           key={type.id}
                           variant="outline"
                           size="sm"
-                          onClick={() => addStep(type.id)}
-                          className="h-auto p-2 flex flex-col gap-1"
+                          onClick={() => addStep(type.id as any)}
+                          className="w-full justify-start"
                         >
-                          <Icon className={`w-4 h-4 ${type.color}`} />
-                          <span className="text-xs">{type.name}</span>
+                          <Plus className="w-4 h-4 mr-2" />
+                          <Icon className={`w-4 h-4 mr-2 ${type.color}`} />
+                          {type.name}
                         </Button>
                       );
                     })}
@@ -163,78 +303,56 @@ const FlowCreator = () => {
                   Etapas do Fluxo
                 </CardTitle>
                 <CardDescription>
-                  Arraste e configure as etapas do seu fluxo de onboarding
+                  Arraste para reordenar e clique para editar as etapas
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {steps.map((step, index) => {
-                    const stepType = stepTypes.find(t => t.id === step.type);
-                    const Icon = stepType?.icon || Send;
-                    
-                    return (
-                      <div key={step.id} className="relative">
-                        <Card className="shadow-sm border-l-4 border-l-primary">
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 gradient-primary rounded-full flex items-center justify-center">
-                                  <Icon className="w-4 h-4 text-white" />
-                                </div>
-                                <div>
-                                  <h4 className="font-medium">{step.title}</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    Etapa {index + 1} • {stepType?.name}
-                                  </p>
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center gap-2">
-                                {step.type === 'delay' && (
-                                  <Input
-                                    type="number"
-                                    placeholder="Dias"
-                                    className="w-20"
-                                    defaultValue={step.delay}
-                                  />
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => removeStep(step.id)}
-                                  className="text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                        
-                        {index < steps.length - 1 && (
-                          <div className="flex justify-center my-2">
-                            <div className="w-px h-6 bg-border"></div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  
-                  {steps.length === 0 && (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <Zap className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>Nenhuma etapa adicionada ainda</p>
-                      <p className="text-sm">Use o painel ao lado para adicionar etapas</p>
-                    </div>
-                  )}
-                </div>
+                {steps.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Zap className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Nenhuma etapa adicionada ainda</p>
+                    <p className="text-sm">Use o painel ao lado para adicionar etapas</p>
+                  </div>
+                ) : (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext 
+                      items={steps.map(s => s.id)} 
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {steps.map((step) => (
+                        <StepItem
+                          key={step.id}
+                          step={step}
+                          onEdit={handleEditStep}
+                          onDelete={handleDeleteStep}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
+
+      {/* Step Editor Dialog */}
+      <StepEditor
+        step={editingStep}
+        isOpen={isEditorOpen}
+        onClose={() => {
+          setIsEditorOpen(false);
+          setEditingStep(null);
+        }}
+        onSave={handleSaveStep}
+      />
     </div>
   );
 };
 
 export default FlowCreator;
+
