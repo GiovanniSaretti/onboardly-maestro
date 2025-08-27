@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, 
@@ -17,36 +16,100 @@ import {
   Users,
   Shield,
   Webhook,
-  Mail
+  Settings as SettingsIcon,
+  TestTube
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { useSettings, type Integration } from "@/hooks/useSettings";
+import { IntegrationDialog } from "@/components/IntegrationDialog";
 
 const Settings = () => {
-  const { toast } = useToast();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const {
+    loading,
+    companySettings,
+    notificationPreferences,
+    integrations,
+    setCompanySettings,
+    setNotificationPreferences,
+    saveCompanySettings,
+    saveNotificationPreferences,
+    uploadLogo,
+    saveIntegration,
+    testIntegration
+  } = useSettings();
 
-  const [companyName, setCompanyName] = useState('Minha Empresa');
-  const [companyEmail, setCompanyEmail] = useState('contato@minhaempresa.com');
-  const [companyDescription, setCompanyDescription] = useState('');
-  const [primaryColor, setPrimaryColor] = useState('#2563EB');
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [pushNotifications, setPushNotifications] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
 
-  const handleSave = () => {
-    toast({
-      title: "Configurações salvas!",
-      description: "Suas alterações foram aplicadas com sucesso.",
-    });
+  // Default integrations
+  const defaultIntegrations: Integration[] = [
+    { 
+      integration_type: 'zapier', 
+      integration_name: 'Zapier', 
+      status: 'available',
+      config: { description: 'Conecte com 5000+ apps' }
+    },
+    { 
+      integration_type: 'make', 
+      integration_name: 'Make (Integromat)', 
+      status: 'available',
+      config: { description: 'Automação visual' }
+    },
+    { 
+      integration_type: 'webhook', 
+      integration_name: 'Webhook Customizado', 
+      status: 'available',
+      config: { description: 'Endpoints personalizados' }
+    },
+    { 
+      integration_type: 'analytics', 
+      integration_name: 'Google Analytics', 
+      status: 'available',
+      config: { description: 'Tracking avançado' }
+    }
+  ];
+
+  const allIntegrations = [...defaultIntegrations.map(def => {
+    const existing = integrations.find(int => int.integration_type === def.integration_type);
+    return existing || def;
+  })];
+
+  const handleSave = async () => {
+    await saveCompanySettings(companySettings);
   };
 
-  const integrations = [
-    { name: 'Zapier', status: 'connected', description: 'Conecte com 5000+ apps' },
-    { name: 'Make (Integromat)', status: 'available', description: 'Automação visual' },
-    { name: 'Webhook', status: 'configured', description: 'Endpoints personalizados' },
-    { name: 'Google Analytics', status: 'available', description: 'Tracking avançado' }
-  ];
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      uploadLogo(file);
+    }
+  };
+
+  const openIntegrationDialog = (integration: Integration) => {
+    setSelectedIntegration(integration);
+    setDialogOpen(true);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'connected': return 'default';
+      case 'configured': return 'secondary';
+      default: return 'outline';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'connected': return 'Conectado';
+      case 'configured': return 'Configurado';
+      default: return 'Disponível';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -65,9 +128,9 @@ const Settings = () => {
             </div>
           </div>
           
-          <Button onClick={handleSave} className="gradient-primary">
+          <Button onClick={handleSave} disabled={loading} className="gradient-primary">
             <Save className="w-4 h-4 mr-2" />
-            Salvar Alterações
+            {loading ? 'Salvando...' : 'Salvar Alterações'}
           </Button>
         </div>
       </header>
@@ -84,7 +147,6 @@ const Settings = () => {
           </TabsList>
 
           <TabsContent value="branding" className="space-y-6">
-            {/* Branding */}
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -102,8 +164,8 @@ const Settings = () => {
                       <Label htmlFor="company-name">Nome da Empresa</Label>
                       <Input
                         id="company-name"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
+                        value={companySettings.company_name}
+                        onChange={(e) => setCompanySettings(prev => ({ ...prev, company_name: e.target.value }))}
                       />
                     </div>
                     
@@ -112,8 +174,8 @@ const Settings = () => {
                       <Input
                         id="company-email"
                         type="email"
-                        value={companyEmail}
-                        onChange={(e) => setCompanyEmail(e.target.value)}
+                        value={companySettings.company_email}
+                        onChange={(e) => setCompanySettings(prev => ({ ...prev, company_email: e.target.value }))}
                       />
                     </div>
                     
@@ -123,13 +185,13 @@ const Settings = () => {
                         <Input
                           id="primary-color"
                           type="color"
-                          value={primaryColor}
-                          onChange={(e) => setPrimaryColor(e.target.value)}
+                          value={companySettings.primary_color}
+                          onChange={(e) => setCompanySettings(prev => ({ ...prev, primary_color: e.target.value }))}
                           className="w-20 h-10"
                         />
                         <Input
-                          value={primaryColor}
-                          onChange={(e) => setPrimaryColor(e.target.value)}
+                          value={companySettings.primary_color}
+                          onChange={(e) => setCompanySettings(prev => ({ ...prev, primary_color: e.target.value }))}
                           className="flex-1"
                         />
                       </div>
@@ -138,17 +200,39 @@ const Settings = () => {
                   
                   <div>
                     <Label>Logo da Empresa</Label>
-                    <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-                      <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Clique para fazer upload ou arraste aqui
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        PNG, JPG até 2MB
-                      </p>
-                      <Button variant="outline" size="sm" className="mt-4">
-                        Escolher Arquivo
-                      </Button>
+                    <div 
+                      className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:bg-muted/50"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {companySettings.logo_url ? (
+                        <div className="space-y-2">
+                          <img 
+                            src={companySettings.logo_url} 
+                            alt="Logo da empresa" 
+                            className="mx-auto max-h-20 max-w-full object-contain"
+                          />
+                          <p className="text-sm text-muted-foreground">
+                            Clique para alterar o logo
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Clique para fazer upload ou arraste aqui
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            PNG, JPG até 2MB
+                          </p>
+                        </>
+                      )}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
                     </div>
                   </div>
                 </div>
@@ -158,8 +242,8 @@ const Settings = () => {
                   <Textarea
                     id="company-description"
                     placeholder="Descreva sua empresa em poucas linhas..."
-                    value={companyDescription}
-                    onChange={(e) => setCompanyDescription(e.target.value)}
+                    value={companySettings.company_description}
+                    onChange={(e) => setCompanySettings(prev => ({ ...prev, company_description: e.target.value }))}
                   />
                 </div>
               </CardContent>
@@ -167,7 +251,6 @@ const Settings = () => {
           </TabsContent>
 
           <TabsContent value="notifications" className="space-y-6">
-            {/* Notificações */}
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -188,8 +271,12 @@ const Settings = () => {
                       </p>
                     </div>
                     <Switch
-                      checked={emailNotifications}
-                      onCheckedChange={setEmailNotifications}
+                      checked={notificationPreferences.email_notifications}
+                      onCheckedChange={(checked) => {
+                        const newPrefs = { ...notificationPreferences, email_notifications: checked };
+                        setNotificationPreferences(newPrefs);
+                        saveNotificationPreferences(newPrefs);
+                      }}
                     />
                   </div>
                   
@@ -203,8 +290,12 @@ const Settings = () => {
                       </p>
                     </div>
                     <Switch
-                      checked={pushNotifications}
-                      onCheckedChange={setPushNotifications}
+                      checked={notificationPreferences.push_notifications}
+                      onCheckedChange={(checked) => {
+                        const newPrefs = { ...notificationPreferences, push_notifications: checked };
+                        setNotificationPreferences(newPrefs);
+                        saveNotificationPreferences(newPrefs);
+                      }}
                     />
                   </div>
                   
@@ -217,7 +308,14 @@ const Settings = () => {
                         Resumo semanal de performance por e-mail
                       </p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch 
+                      checked={notificationPreferences.weekly_reports}
+                      onCheckedChange={(checked) => {
+                        const newPrefs = { ...notificationPreferences, weekly_reports: checked };
+                        setNotificationPreferences(newPrefs);
+                        saveNotificationPreferences(newPrefs);
+                      }}
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -225,7 +323,6 @@ const Settings = () => {
           </TabsContent>
 
           <TabsContent value="integrations" className="space-y-6">
-            {/* Integrações */}
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -238,26 +335,37 @@ const Settings = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {integrations.map((integration, index) => (
+                  {allIntegrations.map((integration, index) => (
                     <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
-                        <h4 className="font-medium">{integration.name}</h4>
-                        <p className="text-sm text-muted-foreground">{integration.description}</p>
+                        <h4 className="font-medium">{integration.integration_name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {integration.config?.description || 'Integração personalizada'}
+                        </p>
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        <Badge 
-                          variant={integration.status === 'connected' ? 'default' : 
-                                  integration.status === 'configured' ? 'secondary' : 'outline'}
-                        >
-                          {integration.status === 'connected' ? 'Conectado' :
-                           integration.status === 'configured' ? 'Configurado' : 'Disponível'}
+                        <Badge variant={getStatusColor(integration.status)}>
+                          {getStatusText(integration.status)}
                         </Badge>
+                        {integration.status === 'configured' && integration.webhook_url && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => testIntegration(integration)}
+                            disabled={loading}
+                          >
+                            <TestTube className="w-3 h-3 mr-1" />
+                            Testar
+                          </Button>
+                        )}
                         <Button 
                           variant="outline" 
                           size="sm"
+                          onClick={() => openIntegrationDialog(integration)}
                         >
-                          {integration.status === 'available' ? 'Conectar' : 'Configurar'}
+                          <SettingsIcon className="w-3 h-3 mr-1" />
+                          {integration.status === 'available' ? 'Configurar' : 'Editar'}
                         </Button>
                       </div>
                     </div>
@@ -268,7 +376,6 @@ const Settings = () => {
           </TabsContent>
 
           <TabsContent value="billing" className="space-y-6">
-            {/* Cobrança */}
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -304,7 +411,6 @@ const Settings = () => {
           </TabsContent>
 
           <TabsContent value="team" className="space-y-6">
-            {/* Equipe */}
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -335,7 +441,6 @@ const Settings = () => {
           </TabsContent>
 
           <TabsContent value="security" className="space-y-6">
-            {/* Segurança */}
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -396,6 +501,15 @@ const Settings = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <IntegrationDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        integration={selectedIntegration}
+        onSave={saveIntegration}
+        onTest={testIntegration}
+        loading={loading}
+      />
     </div>
   );
 };
