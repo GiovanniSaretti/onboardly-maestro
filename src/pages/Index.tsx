@@ -52,9 +52,7 @@ const Index = () => {
               variant="outline" 
               size="lg" 
               className="text-lg px-8 py-6"
-              onClick={() => navigate('/auth')}
-            >
-              Ver demonstração
+              onClick={() => alert('A demonstração ainda não está disponível. Por favor, tente novamente mais tarde.')}
             </Button>
           </div>
         </div>
