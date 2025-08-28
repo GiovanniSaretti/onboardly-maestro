@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       company_settings: {
         Row: {
           company_description: string | null
@@ -47,6 +68,75 @@ export type Database = {
           primary_color?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      customer_onboardings: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_step: number
+          customer_id: string
+          id: string
+          next_action_at: string | null
+          onboarding_id: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          customer_id: string
+          id?: string
+          next_action_at?: string | null
+          onboarding_id: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          customer_id?: string
+          id?: string
+          next_action_at?: string | null
+          onboarding_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_onboardings_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_onboardings_onboarding_id_fkey"
+            columns: ["onboarding_id"]
+            isOneToOne: false
+            referencedRelation: "onboardings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
         }
         Relationships: []
       }
@@ -116,6 +206,89 @@ export type Database = {
           updated_at?: string
           user_id?: string
           weekly_reports?: boolean | null
+        }
+        Relationships: []
+      }
+      onboardings: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      steps: {
+        Row: {
+          content: Json | null
+          created_at: string
+          id: string
+          onboarding_id: string
+          order: number
+          type: string
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          onboarding_id: string
+          order: number
+          type: string
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          onboarding_id?: string
+          order?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steps_onboarding_id_fkey"
+            columns: ["onboarding_id"]
+            isOneToOne: false
+            referencedRelation: "onboardings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhooks: {
+        Row: {
+          created_at: string
+          event: string
+          id: string
+          target_url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          id?: string
+          target_url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          id?: string
+          target_url?: string
+          user_id?: string
         }
         Relationships: []
       }

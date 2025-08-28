@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Key, 
-  Webhook, 
+  Webhook as WebhookIcon, 
   Copy, 
   Eye, 
   EyeOff,
@@ -227,7 +227,7 @@ const Integrations = () => {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Webhook className="w-5 h-5" />
+              <WebhookIcon className="w-5 h-5" />
               Webhooks
             </CardTitle>
             <CardDescription>
@@ -316,7 +316,7 @@ const Integrations = () => {
               </div>
             ) : (
               <div className="text-center py-8">
-                <Webhook className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <WebhookIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <h3 className="text-lg font-medium mb-2">Nenhum webhook configurado</h3>
                 <p className="text-muted-foreground">
                   Configure webhooks para receber notificações de eventos

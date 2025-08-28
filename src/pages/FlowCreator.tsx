@@ -32,7 +32,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { StepItem, StepData } from '@/components/StepItem';
 import { StepEditor } from '@/components/StepEditor';
-import { onboardingApi } from '@/lib/api/onboardings';
+import { onboardingApi } from '@/lib/api/integrations';
 
 const FlowCreator = () => {
   const { id } = useParams();

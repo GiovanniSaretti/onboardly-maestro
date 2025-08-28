@@ -14,7 +14,7 @@ import {
   PlayCircle
 } from "lucide-react";
 import { automationApi } from '@/lib/automation/api';
-import { onboardingApi } from '@/lib/api/onboardings';
+import { onboardingApi } from '@/lib/api/integrations';
 
 const AutomationTest = () => {
   const { toast } = useToast();

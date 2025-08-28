@@ -355,7 +355,7 @@ const N8nDocumentation = () => {
                         </div>
                       </div>
                       
-                      {example.body && (
+                      {'body' in example && example.body && (
                         <div>
                           <h5 className="font-medium mb-2">Request Body:</h5>
                           <div className="bg-muted p-3 rounded-lg">

@@ -73,7 +73,18 @@ export class AutomationEngine {
       throw error;
     }
 
-    return data as ProcessableCustomerOnboarding[];
+    return (data || []).map(item => ({
+      id: item.id,
+      customer_id: item.customer_id,
+      onboarding_id: item.onboarding_id,
+      status: item.status as 'ACTIVE' | 'PAUSED' | 'COMPLETED',
+      current_step: item.current_step,
+      next_action_at: item.next_action_at,
+      created_at: item.created_at,
+      completed_at: item.completed_at,
+      customer: item.customers,
+      onboarding: item.onboardings
+    })) as ProcessableCustomerOnboarding[];
   }
 
   // Process a single customer onboarding

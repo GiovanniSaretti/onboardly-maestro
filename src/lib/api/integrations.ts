@@ -192,3 +192,222 @@ export const WEBHOOK_EVENTS = {
 
 export type WebhookEvent = typeof WEBHOOK_EVENTS[keyof typeof WEBHOOK_EVENTS];
 
+// Data types for onboarding system
+export interface Customer {
+  id: string;
+  email: string;
+  name?: string;
+  created_at: string;
+}
+
+export interface Onboarding {
+  id: string;
+  user_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Step {
+  id: string;
+  onboarding_id: string;
+  type: string;
+  content?: any;
+  order: number;
+  created_at: string;
+}
+
+export interface OnboardingWithSteps extends Onboarding {
+  steps: Step[];
+}
+
+export interface CustomerOnboarding {
+  id: string;
+  customer_id: string;
+  onboarding_id: string;
+  status: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
+  current_step: number;
+  next_action_at?: string;
+  created_at: string;
+  completed_at?: string;
+}
+
+// Customer API
+export const customerApi = {
+  async getAll(): Promise<Customer[]> {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+  },
+
+  async upsert(email: string, name?: string): Promise<Customer> {
+    const { data, error } = await supabase
+      .from('customers')
+      .upsert(
+        { email, name },
+        { onConflict: 'email' }
+      )
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async addToOnboarding(customerId: string, onboardingId: string): Promise<CustomerOnboarding> {
+    const { data, error } = await supabase
+      .from('customer_onboardings')
+      .upsert(
+        {
+          customer_id: customerId,
+          onboarding_id: onboardingId,
+          status: 'ACTIVE',
+          current_step: 0,
+          next_action_at: new Date().toISOString()
+        },
+        { onConflict: 'customer_id,onboarding_id' }
+      )
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return (data as CustomerOnboarding) || null;
+  },
+
+  async getOnboardingProgress(customerId: string): Promise<CustomerOnboarding[]> {
+    const { data, error } = await supabase
+      .from('customer_onboardings')
+      .select(`
+        *,
+        onboardings (
+          id,
+          name,
+          user_id
+        )
+      `)
+      .eq('customer_id', customerId);
+    
+    if (error) throw error;
+    return (data as CustomerOnboarding[]) || [];
+  }
+};
+
+// Onboarding API
+export const onboardingApi = {
+  async getAll(): Promise<Onboarding[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('onboardings')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getById(id: string): Promise<OnboardingWithSteps | null> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data: onboarding, error: onboardingError } = await supabase
+      .from('onboardings')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single();
+    
+    if (onboardingError) return null;
+
+    const { data: steps, error: stepsError } = await supabase
+      .from('steps')
+      .select('*')
+      .eq('onboarding_id', id)
+      .order('order', { ascending: true });
+    
+    if (stepsError) throw stepsError;
+
+    return {
+      ...onboarding,
+      steps: steps || []
+    };
+  },
+
+  async create(name: string): Promise<Onboarding> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('onboardings')
+      .insert({
+        name,
+        user_id: user.id
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, updates: Partial<Pick<Onboarding, 'name'>>): Promise<Onboarding> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('onboardings')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { error } = await supabase
+      .from('onboardings')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+    
+    if (error) throw error;
+  },
+
+  async saveSteps(onboardingId: string, steps: Omit<Step, 'id' | 'onboarding_id' | 'created_at'>[]): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // First, delete existing steps
+    await supabase
+      .from('steps')
+      .delete()
+      .eq('onboarding_id', onboardingId);
+
+    // Then insert new steps
+    if (steps.length > 0) {
+      const stepsToInsert = steps.map(step => ({
+        ...step,
+        onboarding_id: onboardingId
+      }));
+
+      const { error } = await supabase
+        .from('steps')
+        .insert(stepsToInsert);
+      
+      if (error) throw error;
+    }
+  }
+};
+

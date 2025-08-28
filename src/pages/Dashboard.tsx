@@ -19,7 +19,7 @@ import {
   Trash2,
   Play
 } from "lucide-react";
-import { onboardingApi, type Onboarding } from '@/lib/api/onboardings';
+import { onboardingApi, customerApi, type Onboarding } from '@/lib/api/integrations';
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
