@@ -146,17 +146,59 @@ export class AutomationEngine {
     customer: { email: string; name?: string }, 
     customerOnboarding: ProcessableCustomerOnboarding
   ): Promise<void> {
+    console.log(`Executing step ${step.order}: ${step.type}`);
+    
+    const content = step.content || {};
+    
     switch (step.type) {
       case 'EMAIL':
-        await this.sendEmail(step.content, customer, customerOnboarding);
+        await this.sendNotification({
+          type: 'EMAIL',
+          recipient: customer.email,
+          subject: this.replaceVariables(content.subject || 'Welcome!', customer),
+          message: this.replaceVariables(content.body || content.message || '', customer)
+        });
         break;
+        
+      case 'SMS':
+        await this.sendNotification({
+          type: 'SMS',
+          recipient: content.phone || '',
+          message: this.replaceVariables(content.message || '', customer)
+        });
+        break;
+        
       case 'WHATSAPP_MSG':
-        await this.sendWhatsAppMessage(step.content, customer, customerOnboarding);
+        await this.sendNotification({
+          type: 'SMS', // Using SMS for WhatsApp for now
+          recipient: content.phone || '',
+          message: this.replaceVariables(content.message || '', customer)
+        });
         break;
+        
+      case 'TELEGRAM':
+        await this.sendNotification({
+          type: 'TELEGRAM',
+          recipient: content.chat_id || '',
+          message: this.replaceVariables(content.message || '', customer)
+        });
+        break;
+        
+      case 'PUSH':
+        await this.sendNotification({
+          type: 'PUSH',
+          recipient: content.token || '',
+          subject: this.replaceVariables(content.title || 'Notification', customer),
+          message: this.replaceVariables(content.message || '', customer),
+          data: content.data
+        });
+        break;
+        
       case 'DELAY':
         // Delay steps are handled in the scheduling logic, no action needed here
         console.log(`Delay step processed for customer ${customer.email}`);
         break;
+        
       default:
         console.warn(`Unknown step type: ${step.type}`);
     }
@@ -178,54 +220,33 @@ export class AutomationEngine {
     );
   }
 
-  // Send email (placeholder implementation)
-  private static async sendEmail(
-    content: { subject: string; body: string }, 
-    customer: { email: string; name?: string },
-    customerOnboarding: ProcessableCustomerOnboarding
-  ): Promise<void> {
-    // Replace variables in content
-    const subject = this.replaceVariables(content.subject, customer);
-    const body = this.replaceVariables(content.body, customer);
+  // Send notification using the edge function
+  private static async sendNotification(notification: {
+    type: 'EMAIL' | 'SMS' | 'TELEGRAM' | 'PUSH';
+    recipient: string;
+    subject?: string;
+    message: string;
+    data?: any;
+  }) {
+    try {
+      const response = await fetch(`https://nunapqmqfyaujfdihwjb.supabase.co/functions/v1/send-notification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im51bmFwcW1xZnlhdWpmZGlod2piIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyNDg3NDMsImV4cCI6MjA3MTgyNDc0M30.0StNZxk_sURwBpqlVND416BoTUSYdWjyyjpWuq_V99I`,
+        },
+        body: JSON.stringify(notification),
+      });
 
-    console.log(`[EMAIL] To: ${customer.email}`);
-    console.log(`[EMAIL] Subject: ${subject}`);
-    console.log(`[EMAIL] Body: ${body.substring(0, 100)}...`);
+      if (!response.ok) {
+        throw new Error(`Failed to send ${notification.type} notification: ${response.statusText}`);
+      }
 
-    // TODO: Integrate with actual email service (Resend, SendGrid, etc.)
-    // For now, we'll just log the email
-    
-    // Example integration with Resend:
-    /*
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'onboarding@yourdomain.com',
-        to: customer.email,
-        subject: subject,
-        html: body,
-      }),
-    });
-    */
-  }
-
-  // Send WhatsApp message (placeholder implementation)
-  private static async sendWhatsAppMessage(
-    content: { message: string }, 
-    customer: { email: string; name?: string },
-    customerOnboarding: ProcessableCustomerOnboarding
-  ): Promise<void> {
-    const message = this.replaceVariables(content.message, customer);
-
-    console.log(`[WHATSAPP] To: ${customer.email} (phone needed)`);
-    console.log(`[WHATSAPP] Message: ${message}`);
-
-    // TODO: Integrate with WhatsApp Business API or service like Twilio
-    // For now, we'll just log the message
+      console.log(`${notification.type} notification sent successfully to ${notification.recipient}`);
+    } catch (error) {
+      console.error(`Error sending ${notification.type} notification:`, error);
+      throw error;
+    }
   }
 
   // Complete an onboarding flow
@@ -260,7 +281,9 @@ export class AutomationEngine {
   private static replaceVariables(text: string, customer: { email: string; name?: string }): string {
     return text
       .replace(/\{\{nome_do_cliente\}\}/g, customer.name || customer.email)
+      .replace(/\{\{name\}\}/g, customer.name || customer.email)
       .replace(/\{\{email_do_cliente\}\}/g, customer.email)
+      .replace(/\{\{email\}\}/g, customer.email)
       .replace(/\{\{telefone_do_cliente\}\}/g, 'N/A'); // TODO: Add phone field to customer
   }
 

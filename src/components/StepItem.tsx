@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export interface StepData {
   id: string;
-  type: 'EMAIL' | 'DELAY' | 'WHATSAPP_MSG';
+  type: 'EMAIL' | 'SMS' | 'TELEGRAM' | 'PUSH' | 'DELAY' | 'WHATSAPP_MSG';
   content: any;
   order: number;
 }
@@ -31,6 +31,12 @@ export const StepItem = ({ step, onEdit, onDelete }: StepItemProps) => {
     switch (type) {
       case 'EMAIL':
         return <Mail className="h-5 w-5 text-blue-500" />;
+      case 'SMS':
+        return <MessageSquare className="h-5 w-5 text-purple-500" />;
+      case 'TELEGRAM':
+        return <MessageSquare className="h-5 w-5 text-blue-400" />;
+      case 'PUSH':
+        return <MessageSquare className="h-5 w-5 text-red-500" />;
       case 'DELAY':
         return <Clock className="h-5 w-5 text-orange-500" />;
       case 'WHATSAPP_MSG':
@@ -44,6 +50,12 @@ export const StepItem = ({ step, onEdit, onDelete }: StepItemProps) => {
     switch (step.type) {
       case 'EMAIL':
         return step.content.subject || 'Novo E-mail';
+      case 'SMS':
+        return `SMS: ${step.content.message?.substring(0, 30) || 'Nova mensagem'}${step.content.message?.length > 30 ? '...' : ''}`;
+      case 'TELEGRAM':
+        return `Telegram: ${step.content.message?.substring(0, 30) || 'Nova mensagem'}${step.content.message?.length > 30 ? '...' : ''}`;
+      case 'PUSH':
+        return step.content.title || 'Nova Push Notification';
       case 'DELAY':
         return `Aguardar por ${step.content.delayInDays || 1} dia(s)`;
       case 'WHATSAPP_MSG':
@@ -58,9 +70,21 @@ export const StepItem = ({ step, onEdit, onDelete }: StepItemProps) => {
   const getDescription = (step: StepData) => {
     switch (step.type) {
       case 'EMAIL':
-        return step.content.body ? 
-          step.content.body.substring(0, 100) + (step.content.body.length > 100 ? '...' : '') :
+        return step.content.body || step.content.message ? 
+          (step.content.body || step.content.message).substring(0, 100) + ((step.content.body || step.content.message).length > 100 ? '...' : '') :
           'Clique para editar o conteúdo do e-mail';
+      case 'SMS':
+        return step.content.message ? 
+          step.content.message.substring(0, 100) + (step.content.message.length > 100 ? '...' : '') :
+          'Clique para configurar o SMS';
+      case 'TELEGRAM':
+        return step.content.message ? 
+          step.content.message.substring(0, 100) + (step.content.message.length > 100 ? '...' : '') :
+          'Clique para configurar o Telegram';
+      case 'PUSH':
+        return step.content.message ? 
+          step.content.message.substring(0, 100) + (step.content.message.length > 100 ? '...' : '') :
+          'Clique para configurar a push notification';
       case 'DELAY':
         return `Pausa o fluxo por ${step.content.delayInDays || 1} dia(s) antes de continuar`;
       case 'WHATSAPP_MSG':

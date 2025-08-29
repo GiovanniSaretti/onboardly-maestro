@@ -92,13 +92,16 @@ const FlowCreator = () => {
 
   const stepTypes = [
     { id: 'EMAIL', name: 'Enviar E-mail', icon: Send, color: 'text-blue-500' },
+    { id: 'SMS', name: 'Enviar SMS', icon: MessageSquare, color: 'text-purple-500' },
+    { id: 'TELEGRAM', name: 'Telegram', icon: MessageSquare, color: 'text-blue-400' },
+    { id: 'PUSH', name: 'Push Notification', icon: MessageSquare, color: 'text-red-500' },
     { id: 'DELAY', name: 'Adicionar Atraso', icon: Clock, color: 'text-orange-500' },
     { id: 'WHATSAPP_MSG', name: 'Mensagem WhatsApp', icon: MessageSquare, color: 'text-green-500' }
   ];
 
   const generateStepId = () => `step_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  const addStep = (type: 'EMAIL' | 'DELAY' | 'WHATSAPP_MSG') => {
+  const addStep = (type: 'EMAIL' | 'SMS' | 'TELEGRAM' | 'PUSH' | 'DELAY' | 'WHATSAPP_MSG') => {
     const newStep: StepData = {
       id: generateStepId(),
       type,
@@ -111,11 +114,17 @@ const FlowCreator = () => {
   const getDefaultContent = (type: string) => {
     switch (type) {
       case 'EMAIL':
-        return { subject: '', body: '' };
+        return { subject: '', message: '' };
+      case 'SMS':
+        return { phone: '', message: '' };
+      case 'TELEGRAM':
+        return { chat_id: '', message: '' };
+      case 'PUSH':
+        return { token: '', title: '', message: '' };
       case 'DELAY':
         return { delayInDays: 1 };
       case 'WHATSAPP_MSG':
-        return { message: '' };
+        return { phone: '', message: '' };
       default:
         return {};
     }
